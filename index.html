@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#00d4ff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="JARVIS" />
+  <title>J.A.R.V.I.S</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════ SETTINGS MODAL ═══════════════════ -->
+  <div id="settings-overlay" class="settings-overlay hidden">
+    <div class="settings-modal">
+      <div class="settings-header">
+        <span class="settings-title">⚙ CONFIGURAÇÕES DO SISTEMA</span>
+        <button id="close-settings" class="close-btn">✕</button>
+      </div>
+      <div class="settings-body">
+
+        <!-- Gemini: apenas informativo — chave embutida no código -->
+        <div class="settings-section">
+          <h3>🤖 Gemini AI</h3>
+          <label>Status da API</label>
+          <input type="text" id="gemini-key" disabled value="✅ Configurado via código" />
+          <label style="color: var(--success); font-size:10px;">
+            ● Modelo: gemini-2.0-flash-preview — Online
+          </label>
+        </div>
+
+        <div class="settings-section">
+          <h3>🎵 Spotify (Opcional)</h3>
+          <label>Client ID</label>
+          <input type="text" id="spotify-client-id" placeholder="Seu Spotify Client ID..." />
+          <label>Redirect URI</label>
+          <input type="text" id="spotify-redirect" placeholder="http://localhost:5500/index.html" />
+          <button id="spotify-auth-btn" class="action-btn">Conectar ao Spotify</button>
+          <div id="spotify-status" class="status-badge disconnected">● Desconectado</div>
+          <a href="https://developer.spotify.com/dashboard" target="_blank" class="help-link">→ Criar app no Spotify Developer</a>
+        </div>
+
+        <div class="settings-section">
+          <h3>🎵 Músicas Locais</h3>
+          <label style="font-size:10px; color: var(--text-dim); line-height:1.6;">
+            Coloque arquivos .mp3 na raiz do projeto e diga:<br>
+            <span style="color:var(--cyan);">"JARVIS, toque stark"</span> → toca stark.mp3<br>
+            <span style="color:var(--cyan);">"JARVIS, toque iron man"</span> → toca stark.mp3
+          </label>
+        </div>
+
+        <div class="settings-section">
+          <h3>🎙 Voz</h3>
+          <label>Idioma de reconhecimento</label>
+          <select id="voice-lang">
+            <option value="pt-BR">Português (Brasil)</option>
+            <option value="en-US">English (US)</option>
+            <option value="es-ES">Español</option>
+          </select>
+          <label>Velocidade de fala (TTS)</label>
+          <input type="range" id="tts-rate" min="0.5" max="2" step="0.1" value="1" />
+          <span id="tts-rate-val">1.0x</span>
+          <label>Tom da voz</label>
+          <input type="range" id="tts-pitch" min="0.5" max="2" step="0.1" value="0.9" />
+        </div>
+
+        <div class="settings-section">
+          <h3>📷 Câmera</h3>
+          <label>
+            <input type="checkbox" id="enable-camera" checked />
+            Ativar reconhecimento de câmera
+          </label>
+          <label>
+            <input type="checkbox" id="enable-face" checked />
+            Detecção de rosto (MediaPipe)
+          </label>
+          <label>
+            <input type="checkbox" id="enable-hands" checked />
+            Detecção de mãos (MediaPipe)
+          </label>
+        </div>
+
+        <div class="settings-section">
+          <h3>🧠 Personalidade</h3>
+          <label>Prompt de sistema</label>
+          <textarea id="system-prompt" rows="4">Você é J.A.R.V.I.S. (Just A Rather Very Intelligent System), a IA pessoal do Tony Stark. Responda sempre de forma inteligente, sofisticada e ligeiramente sarcástica, como um mordomo britânico high-tech. Use termos técnicos, chame o usuário de "Senhor" ou pelo nome se souber. Seja conciso nas respostas faladas. Responda em português do Brasil.</textarea>
+        </div>
+
+        <button id="save-settings" class="save-btn">💾 SALVAR E APLICAR</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ MAIN UI ═══════════════════ -->
+  <div id="app">
+
+    <canvas id="bg-canvas"></canvas>
+    <video id="camera-feed" autoplay muted playsinline></video>
+    <canvas id="vision-canvas"></canvas>
+
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+
+    <!-- Header -->
+    <header class="hud-header">
+      <div class="hud-logo">
+        <span class="logo-j">J</span><span class="logo-dot">.</span><span class="logo-a">A</span><span class="logo-dot">.</span><span class="logo-r">R</span><span class="logo-dot">.</span><span class="logo-v">V</span><span class="logo-dot">.</span><span class="logo-i">I</span><span class="logo-dot">.</span><span class="logo-s">S</span>
+      </div>
+      <div class="hud-info">
+        <span id="hud-time">--:--:--</span>
+        <span id="hud-date">--/--/----</span>
+      </div>
+      <div class="hud-controls">
+        <button id="vision-toggle" class="icon-btn" title="Câmera">👁</button>
+        <button id="settings-btn" class="icon-btn" title="Configurações">⚙</button>
+      </div>
+    </header>
+
+    <!-- Arc Reactor -->
+    <div class="arc-container">
+      <div class="arc-outer-ring">
+        <div class="arc-ring ring-1"></div>
+        <div class="arc-ring ring-2"></div>
+        <div class="arc-ring ring-3"></div>
+        <div class="arc-core" id="arc-core">
+          <div class="arc-inner"></div>
+          <div class="arc-pulse"></div>
+        </div>
+      </div>
+      <div class="radar-sweep"></div>
+      <div class="arc-labels">
+        <span class="arc-label top">NEURAL CORE</span>
+        <span class="arc-label bottom">MARK VII</span>
+      </div>
+    </div>
+
+    <!-- Status bar -->
+    <div class="status-bar">
+      <div class="status-item">
+        <span class="status-dot" id="ai-dot"></span>
+        <span id="ai-status-text">IA: Offline</span>
+      </div>
+      <div class="status-item">
+        <span class="status-dot" id="mic-dot"></span>
+        <span id="mic-status-text">MIC: Inativo</span>
+      </div>
+      <div class="status-item">
+        <span class="status-dot" id="spotify-dot"></span>
+        <span id="spotify-status-text">SPOTIFY: Off</span>
+      </div>
+      <div class="status-item">
+        <span class="status-dot" id="cam-dot"></span>
+        <span id="cam-status-text">CAM: Off</span>
+      </div>
+    </div>
+
+    <!-- Vision overlay -->
+    <div id="vision-overlay" class="vision-overlay hidden">
+      <div class="vision-panel left-panel">
+        <div class="panel-title">FACIAL SCAN</div>
+        <div id="face-data" class="panel-data">Aguardando...</div>
+      </div>
+      <div class="vision-panel right-panel">
+        <div class="panel-title">GESTURE INPUT</div>
+        <div id="hand-data" class="panel-data">Aguardando...</div>
+      </div>
+    </div>
+
+    <!-- Chat -->
+    <div class="chat-container" id="chat-container">
+      <div id="chat-log"></div>
+    </div>
+
+    <!-- Waveform -->
+    <div class="visualizer-container">
+      <canvas id="wave-canvas"></canvas>
+    </div>
+
+    <!-- Spotify / Áudio Bar -->
+    <div id="spotify-bar" class="spotify-bar hidden">
+      <div class="spotify-icon">🎵</div>
+      <div class="spotify-info">
+        <span id="track-name">—</span>
+        <span id="artist-name">—</span>
+      </div>
+      <div class="spotify-controls">
+        <button id="sp-prev" class="sp-btn">⏮</button>
+        <button id="sp-play" class="sp-btn">▶</button>
+        <button id="sp-next" class="sp-btn">⏭</button>
+      </div>
+    </div>
+
+    <!-- Mic Button -->
+    <div class="mic-area">
+      <button id="mic-btn" class="mic-btn" title="Falar com JARVIS">
+        <span class="mic-icon">🎙</span>
+        <div class="mic-ripple"></div>
+        <div class="mic-ripple delay-1"></div>
+      </button>
+      <div id="transcript-preview" class="transcript-preview"></div>
+    </div>
+
+    <!-- Quick commands -->
+    <div class="quick-cmds">
+      <button class="qcmd" data-cmd="Olá JARVIS, como você está?">Olá</button>
+      <button class="qcmd" data-cmd="Que horas são?">Hora</button>
+      <button class="qcmd" data-cmd="jarvis toque stark">🎵 Stark</button>
+      <button class="qcmd" data-cmd="Qual é a previsão do tempo em Salvador?">Tempo</button>
+      <button class="qcmd" data-cmd="Me conte uma curiosidade interessante">Curiosidade</button>
+    </div>
+
+  </div>
+
+  <!-- MediaPipe libs -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <script src="app.js"></script>
+</body>
+</html>
