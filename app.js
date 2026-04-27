@@ -11,7 +11,7 @@
 const CONFIG = {
   // ✅ Gemini integrado diretamente no código
   geminiKey: 'AIzaSyDLvfcy7kyxzUKu1u5RMA2B4Jm1cbA9k3s',
-  geminiModel: 'gemini-2.0-flash-preview',  // modelo solicitado
+  geminiModel: 'gemini-3-flash-preview',  // modelo solicitado
 
   // Spotify (OAuth — configurar nas settings se quiser)
   spotifyClientId: localStorage.getItem('jarvis_spotify_client_id') || '',
